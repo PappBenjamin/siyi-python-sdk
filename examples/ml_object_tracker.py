@@ -30,9 +30,22 @@ class Track_Object:
 class VideoCapture:
 
   def __init__(self, name):
-    
-    self.cap = cv2.VideoCapture(name, cv2.CAP_FFMPEG, [cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY])
-    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 10)
+    # Use different backend for camera vs RTSP stream
+    if isinstance(name, int):
+        # For built-in camera, use default backend
+        self.cap = cv2.VideoCapture(name)
+        print(f"Initializing built-in camera {name}")
+    else:
+        # For RTSP streams, use FFmpeg with hardware acceleration
+        self.cap = cv2.VideoCapture(name, cv2.CAP_FFMPEG, [cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY])
+        print(f"Initializing RTSP stream {name}")
+
+    # Check if camera opened successfully
+    if not self.cap.isOpened():
+        print(f"Error: Could not open camera/stream {name}")
+        return
+
+    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Reduce buffer for real-time
 
     self.q = queue.Queue()
     t = threading.Thread(target=self._reader)
@@ -43,8 +56,8 @@ class VideoCapture:
   def _reader(self):
     while True:
       ret, frame = self.cap.read()
-      # frame = cv2.resize(frame, None, fx=0.6, fy=0.6)
       if not ret:
+        print("Failed to read frame from camera")
         break
       if not self.q.empty():
         try:
@@ -52,13 +65,20 @@ class VideoCapture:
         except queue.Empty:
           pass
       self.q.put(frame)
+
   def read(self):
-    print("qsize", self.q.qsize())
+    if self.q.empty():
+        print("No frames available in queue")
+        return None
     return self.q.get()
   
 
 
-model = YOLO('yolov8m.pt')
+# Remove corrupted model file if it exists and force fresh download
+if os.path.exists('yolov8m.pt'):
+    os.remove('yolov8m.pt')
+
+model = YOLO('yolov8m.pt')  # This will automatically download a fresh copy
 
 ml_results = None
 track_history_ml = defaultdict(lambda: [])
@@ -225,7 +245,8 @@ if __name__ == "__main__":
     timer = 0
     is_bisy = False
     
-    RTSP_URL = "rtsp://192.168.144.25:8554/main.264"
+    # Use built-in camera instead of RTSP stream
+    RTSP_URL = 0
 
     siyi_cap = VideoCapture(RTSP_URL)
 
@@ -241,6 +262,11 @@ if __name__ == "__main__":
             is_click = False
 
         frame = siyi_cap.read()
+
+        # Check if frame is valid
+        if frame is None:
+            print("No frame received from camera")
+            continue
 
         # If a ROI is selected, draw it
         if show_drawing:
