@@ -42,60 +42,65 @@ class Track_Object:
 #----------------------------------------------------------------------
 
 class VideoCapture:
+    def __init__(self, name):
+        self.q = queue.Queue()  # Always create the queue
+        self.cap = None
+        # Use different backend for camera vs RTSP stream
+        if isinstance(name, int):
+            # For built-in camera, use default backend
+            self.cap = cv2.VideoCapture(name)
+            print(f"Initializing built-in camera {name}")
+        else:
+            # For RTSP streams, use FFmpeg with hardware acceleration
+            self.cap = cv2.VideoCapture(name, cv2.CAP_FFMPEG, [cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY])
+            print(f"Initializing RTSP stream {name}")
 
-  def __init__(self, name):
-    # Use different backend for camera vs RTSP stream
-    if isinstance(name, int):
-        # For built-in camera, use default backend
-        self.cap = cv2.VideoCapture(name)
-        print(f"Initializing built-in camera {name}")
-    else:
-        # For RTSP streams, use FFmpeg with hardware acceleration
-        self.cap = cv2.VideoCapture(name, cv2.CAP_FFMPEG, [cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY])
-        print(f"Initializing RTSP stream {name}")
+        # Check if camera opened successfully
+        if not self.cap or not self.cap.isOpened():
+            print(f"Error: Could not open camera/stream {name}")
+            self.cap = None  # Mark as not available
+            return
 
-    # Check if camera opened successfully
-    if not self.cap.isOpened():
-        print(f"Error: Could not open camera/stream {name}")
-        return
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Reduce buffer for real-time
+        t = threading.Thread(target=self._reader)
+        t.daemon = True
+        t.start()
 
-    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Reduce buffer for real-time
+    # read frames as soon as they are available, keeping only most recent one
+    def _reader(self):
+        while self.cap and self.cap.isOpened():
+            ret, frame = self.cap.read()
+            if not ret:
+                print("Failed to read frame from camera")
+                break
+            if not self.q.empty():
+                try:
+                    self.q.get_nowait()   # discard previous (unprocessed) frame
+                except queue.Empty:
+                    pass
+            self.q.put(frame)
 
-    self.q = queue.Queue()
-    t = threading.Thread(target=self._reader)
-    t.daemon = True
-    t.start()
+    def read(self):
+        if not self.cap or not self.cap.isOpened():
+            print("Camera not connected")
+            return None
+        if self.q.empty():
+            print("No frames available in queue")
+            return None
+        return self.q.get()
 
-  # read frames as soon as they are available, keeping only most recent one
-  def _reader(self):
-    while True:
-      ret, frame = self.cap.read()
-      if not ret:
-        print("Failed to read frame from camera")
-        break
-      if not self.q.empty():
-        try:
-          self.q.get_nowait()   # discard previous (unprocessed) frame
-        except queue.Empty:
-          pass
-      self.q.put(frame)
-
-  def read(self):
-    if self.q.empty():
-        print("No frames available in queue")
-        return None
-    return self.q.get()
-  
+    def __del__(self):
+        if self.cap and self.cap.isOpened():
+            self.cap.release()
 
 #----------------------------------------------------------------------
 # MODEL LOADING AND GLOBAL VARIABLES
 #----------------------------------------------------------------------
 
 # Remove model file if it exists and force fresh download
-if os.path.exists('yolov8m.pt'):
-    os.remove('yolov8m.pt')
-
-model = YOLO('yolov8m.pt')  # This will automatically download a fresh copy
+# if os.path.exists('yolov8n.pt'):
+#      os.remove('yolov8n.pt')
+model = YOLO('yolov8n.pt')
 
 # Tracking variables
 ml_results = None
@@ -333,7 +338,7 @@ if __name__ == "__main__":
     is_bisy = False
     
     # Use RTSP stream or built-in camera (0)
-    RTSP_URL = "rtsp://192.168.0.253/video"
+    RTSP_URL = "rtsp://192.168.144.25:8554/main.264"
     siyi_cap = VideoCapture(RTSP_URL)
 
 
