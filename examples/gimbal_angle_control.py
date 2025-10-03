@@ -5,7 +5,7 @@
 @Contact: mohamedashraf123@gmail.com
 All rights reserved 2022
 """
-
+from operator import truediv
 from time import sleep
 import sys
 import os
@@ -16,21 +16,26 @@ parent_directory = os.path.dirname(current)
 sys.path.append(parent_directory)
 
 from siyi_sdk import SIYISDK
+from siyi_control import SIYIControl
+import threading
+
+
+
 
 def test():
-    cam = SIYISDK(server_ip="192.168.144.25", port=37260)
-    if not cam.connect():
-        print("No connection ")
-        exit(1)
-    print("Current motion mode: ", cam._motionMode_msg.mode)
 
-    cam.requestCenterGimbal
+    siyi_control = SIYIControl()
 
-    cam.setGimbalRotation(yaw=0,pitch=-85,err_thresh=0.1,kp=0.1)
+    siyi_control.cam.setYawAngle(40)
+    siyi_control.cam.setPitchAngle(90)
 
-    print("Attitude (yaw,pitch,roll) eg:", cam.getAttitude())
+    msg = siyi_control.cam.getAttitude()
+    sleep(1)
 
-    cam.disconnect()
+    print("ZOOM: ", msg)
+
+    #siyi_control.cam.setYawAngle(40)
 
 if __name__ == "__main__":
-    test()
+   while True:
+       test()
