@@ -23,6 +23,7 @@ class SIYISDK:
         - server_ip [str] IP address of the camera
         - port: [int] UDP port of the camera
         """
+
         self._debug= debug # print debug messages
         if self._debug:
             d_level = logging.DEBUG
@@ -135,7 +136,7 @@ class SIYISDK:
             if self._connected:
                 self._g_info_thread.start()
                 self._g_att_thread.start()
-                self._pid_angle_thread.start()
+                # self._pid_angle_thread.start() # blocking manual alignment
                 return True
             if (time() - t0)>maxWaitTime and not self._connected:
                 self.disconnect()
@@ -844,10 +845,10 @@ class SIYISDK:
                 # self._logger.info("Did not get new attitude msg")
                 self.requestGimbalSpeed(0,0)
                 continue
-            if self._motionMode_msg.mode != MotionModeMsg.FOLLOW:
-                print("PID on pause")
-                sleep(1)
-                continue
+            # if self._motionMode_msg.mode != MotionModeMsg.FOLLOW:
+            #     print("PID on pause")
+            #     sleep(1)
+            #     continue
             else:
                 self.is_pause_pid = False
 

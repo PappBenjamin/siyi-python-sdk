@@ -9,6 +9,8 @@ All rights reserved 2022
 from time import sleep
 import sys
 import os
+
+from numpy.f2py.crackfortran import endifs
 from pynput.keyboard import Key, Listener
 import threading
 
@@ -130,4 +132,11 @@ class SIYIControl:
         
         print("set offset", self.yaw, self.pitch)
         self.cam.setRotation(int(self.yaw), int(self.pitch))
-        
+
+class SIYIControl_DATA:
+    def __init__(self, _server_ip="192.168.144.25", _port=37260, connect=True):
+        self.cam = SIYISDK(server_ip=_server_ip, port=_port)
+        if connect:
+            if not self.cam.connect():
+                print("No connection ")
+                exit(1)
