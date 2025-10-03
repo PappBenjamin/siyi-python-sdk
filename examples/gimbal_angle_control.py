@@ -1,41 +1,30 @@
-"""
-@file test_gimbal_rotation.py
-@Description: This is a test script for using the SIYI SDK Python implementation to set/get gimbal rotation
-@Author: Mohamed Abdelkader
-@Contact: mohamedashraf123@gmail.com
-All rights reserved 2022
-"""
-from operator import truediv
-from time import sleep
 import sys
 import os
-  
+import threading
+from time import sleep
+
 current = os.path.dirname(os.path.realpath(__file__))
 parent_directory = os.path.dirname(current)
-  
 sys.path.append(parent_directory)
 
-from siyi_sdk import SIYISDK
 from siyi_control import SIYIControl
-import threading
 
+stop_event = threading.Event()
 
-
-
-def test():
-
-    siyi_control = SIYIControl()
-
-    siyi_control.cam.setYawAngle(40)
-    siyi_control.cam.setPitchAngle(90)
-
-    msg = siyi_control.cam.getAttitude()
-    sleep(1)
-
-    print("ZOOM: ", msg)
-
-    #siyi_control.cam.setYawAngle(40)
+def data_loop(siyi_control):
+    while not stop_event.is_set():
+        msg = siyi_control.cam.getAttitude()
+        print("Gimbal data:", msg)
+        sleep(2)  # Adjust for how often you want to get data
 
 if __name__ == "__main__":
-   while True:
-       test()
+    siyi_control = SIYIControl()
+    data_thread = threading.Thread(target=data_loop, args=(siyi_control,))
+    data_thread.start()
+    try:
+        while True:
+            sleep(1)
+    except KeyboardInterrupt:
+        print("Exiting on user interrupt.")
+        stop_event.set()
+        data_thread.join()

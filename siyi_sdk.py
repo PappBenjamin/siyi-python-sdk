@@ -250,7 +250,15 @@ class SIYISDK:
         """
         Receives messages and parses its content
         """
-        buff,addr = self._socket.recvfrom(self._BUFF_SIZE)
+        import socket
+        try:
+            buff,addr = self._socket.recvfrom(self._BUFF_SIZE)
+        except (socket.timeout, TimeoutError):
+            # Timeout occurred, just return and let the loop continue
+            return
+        except Exception as e:
+            self._logger.warning("Exception in bufferCallback: %s", e)
+            return
 
         buff_str = buff.hex()
         self._logger.debug("Buffer: %s", buff_str)

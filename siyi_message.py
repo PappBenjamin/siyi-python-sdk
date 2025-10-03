@@ -138,6 +138,7 @@ class SIYIMESSAGE:
 
     
     def incrementSEQ(self, val):
+
         """
         Increments sequence number by one, converts them to hex, and revereses the byte order.
 
@@ -295,8 +296,8 @@ class SIYIMESSAGE:
         """
         seq = self.incrementSEQ(self._seq)
         data_len = self.computeDataLen(data)
-        # msg_front = self.HEADER+self._ctr+data_len+seq+cmd_id+data
-        msg_front = self.HEADER+self._ctr+data_len+'0000'+cmd_id+data
+        # Use the actual sequence number instead of hardcoded '0000'
+        msg_front = self.HEADER+self._ctr+data_len+seq+cmd_id+data
 
         crc = crc16_str_swap(msg_front)
         if crc is not None:
@@ -532,5 +533,3 @@ class SIYIMESSAGE:
         
         cmd_id = COMMAND.GIMBAL_ROT
         return self.encodeMsg(data, cmd_id)
-
-
