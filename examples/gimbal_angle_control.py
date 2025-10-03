@@ -1,8 +1,8 @@
 from time import sleep
-from examples.siyi_control import SIYIControl_DATA
+from examples.siyi_control import SIYIControl
 from pymavlink import mavutil
 
-siyi_control = SIYIControl_DATA()
+siyi_control = SIYIControl()
 
 def get_mavlink_connection():
     """Establish and return a MAVLink connection."""
@@ -19,9 +19,6 @@ def get_mavlink_connection():
 def get_gimbal_data():
     """Fetch and print gimbal attitude data."""
     try:
-        # siyi_control.cam.requestGimbalInfo()
-        # sleep(1)
-
         attitude = siyi_control.cam.getAttitude()  # returns (yaw, pitch, roll)
         motion = siyi_control.cam.getMotionMode()  # likely returns a value, not a dict
         mountingDir = siyi_control.cam.getMountingDirection()  # likely returns a value, not a dict
@@ -40,33 +37,45 @@ def get_gimbal_data():
         return None
 
 def get_mavlink_telemetry(mav_conn):
-    """Fetch and print MAVLink telemetry: battery, attitude, GPS."""
+    """Fetch and print useful Pixhawk MAVLink telemetry in one message."""
     try:
         msg = mav_conn.recv_match(blocking=True, timeout=5)
         if not msg:
             print("No MAVLink message received.")
             return
-        if msg.get_type() == 'BATTERY_STATUS':
-            voltage = msg.voltages[0] / 1000.0 if msg.voltages[0] != 0xFFFF else None
-            print(f"Battery voltage: {voltage} V")
-        elif msg.get_type() == 'ATTITUDE':
-            print(f"Attitude - Roll: {msg.roll:.2f}, Pitch: {msg.pitch:.2f}, Yaw: {msg.yaw:.2f}")
-        elif msg.get_type() == 'GLOBAL_POSITION_INT':
+
+        msg_type = msg.get_type()
+        output = []
+
+        # if msg_type == 'HEARTBEAT':
+        #     output.append(f"Heartbeat: type={msg.type}, autopilot={msg.autopilot}, base_mode={msg.base_mode}, system_status={msg.system_status}")
+        # if msg_type == 'BATTERY_STATUS':
+        #     voltage = msg.voltages[0] / 1000.0 if msg.voltages[0] != 0xFFFF else None
+        #     output.append(f"Battery voltage: {voltage} V")
+        if msg_type == 'ATTITUDE':
+            output.append(f"PX4 Attitude - Roll: {msg.roll:.2f}, Pitch: {msg.pitch:.2f}, Yaw: {msg.yaw:.2f}")
+        if msg_type == 'GLOBAL_POSITION_INT':
             lat = msg.lat / 1e7
             lon = msg.lon / 1e7
             alt = msg.alt / 1000.0
-            print(f"GPS - Lat: {lat:.7f}, Lon: {lon:.7f}, Alt: {alt:.2f} m")
+            output.append(f"GPS - Lat: {lat:.7f}, Lon: {lon:.7f}, Alt: {alt:.2f} m")
+        # if msg_type == 'SYS_STATUS':
+        #     output.append(f"System status: battery={msg.battery_remaining}%, load={msg.load/10.0}%")
+        # # if msg_type == 'VFR_HUD':
+        #     output.append(f"VFR HUD: airspeed={msg.airspeed:.2f} m/s, groundspeed={msg.groundspeed:.2f} m/s, heading={msg.heading}, throttle={msg.throttle}%")
+
+        if output:
+            print(" | ".join(output))
+
     except Exception as e:
         print(f"Error fetching MAVLink telemetry: {e}")
-
-
 
 def main():
 
     print("\n--- SIYI Gimbal Data Fetcher ---")
 
     # starting services
-    # mav_comm = get_mavlink_connection()
+    mav_comm = get_mavlink_connection()
 
 
     while True:
@@ -77,8 +86,8 @@ def main():
             get_gimbal_data()
 
         # get mavlink telemetry
-        # if mav_comm:
-        #     get_mavlink_telemetry(mav_comm)
+        if mav_comm:
+            get_mavlink_telemetry(mav_comm)
 
 
         sleep(1)

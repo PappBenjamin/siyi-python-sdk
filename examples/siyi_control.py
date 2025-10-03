@@ -34,16 +34,12 @@ class SIYIControl:
         if not self.cam.connect():
             print("No connection ")
             exit(1)
-        print("Current motion mode: ", self.cam._motionMode_msg.mode)
         self.cam.requestFollowMode()
 
         _list_thread = threading.Thread(target=self.listener_tread,
                                                 args=())
         
         _list_thread.start()
-        sleep(1)
-     
-        print("Attitude (yaw,pitch,roll) eg:", self.cam.getAttitude())
         sleep(1)
         if not self.init_flag:
             att = self.cam.getAttitude()
@@ -132,11 +128,3 @@ class SIYIControl:
         
         print("set offset", self.yaw, self.pitch)
         self.cam.setRotation(int(self.yaw), int(self.pitch))
-
-class SIYIControl_DATA:
-    def __init__(self, _server_ip="192.168.144.25", _port=37260, connect=True):
-        self.cam = SIYISDK(server_ip=_server_ip, port=_port)
-        if connect:
-            if not self.cam.connect():
-                print("No connection ")
-                exit(1)

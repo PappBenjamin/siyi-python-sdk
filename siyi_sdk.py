@@ -149,7 +149,6 @@ class SIYISDK:
         self.resetVars()
         self._socket.close()
 
-
     def checkConnection(self):
         """
         checks if there is live connection to the camera by requesting the Firmware version.
