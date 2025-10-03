@@ -204,3 +204,12 @@ cam.requestFirmwareVersion()
 
     cam.disconnect()
 ```
+
+
+# TODO
+
+- Display the data from mavlink and gimbal
+- Delete unnecessary files
+- Set offset for obj tracking
+- rewrite and optimise code for a simpler look
+  
